@@ -291,11 +291,17 @@ const (
 )
 
 type RRDData struct {
-	MaxCPU  int
-	MaxMem  uint64
-	Disk    int
-	MaxDisk uint64
-	Time    uint64
+    CPU         float64
+    DiskRead    float64
+    DiskWrite   float64
+	MaxCPU      int
+	MaxMem      float64
+    Mem         float64
+    NetIn       float64
+    NetOut      float64
+	Disk        int
+	MaxDisk     float64
+	Time        uint64
 }
 
 // VirtualMachineOptions A key/value pair used to modify a virtual machine config
