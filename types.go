@@ -752,20 +752,20 @@ type Backup struct{ Content }
 
 
 type ClusterBackupSchedule struct {
-    Enabled             bool                `json:"enabled,omitempty"`
+    Enabled             uint                `json:"enabled,omitempty"`
     Schedule            string              `json:"schedule,omitempty"`
     Id                  string              `json:"id,omitempty"`
-    RepeatMissed        string              `json:"repeat-missed,omitempty"`
+    RepeatMissed        uint                `json:"repeat-missed,omitempty"`
     NotesTemplate       string              `json:"notes-template,omitempty"`
     MailNotification    string              `json:"mailnotification,omitempty"`
-    All                 bool                `json:"all,omitempty"`
+    All                 uint                `json:"all,omitempty"`
     PruneBackups        map[string]string   `json:"prune-backups,omitempty"` 
     Mode                string              `json:"mode,omitempty"` 
     Type                string              `json:"type,omitempty"` 
     NextRun             uint                `json:"next-run,omitempty"` 
     Storage             string              `json:"storage,omitempty"` 
-    VMID                uint                `json:"vmid,omitempty"` 
-    Remove              bool                `json:"remove,omitempty"` 
+    VMID                string              `json:"vmid,omitempty"` 
+    Remove              uint                `json:"remove,omitempty"` 
 }
 
 type Content struct {

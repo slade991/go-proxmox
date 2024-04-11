@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -73,6 +74,16 @@ func (cl *Cluster) GetBackups(ctx context.Context) (*[]ClusterBackupSchedule, er
 	return backups, nil
 
 }
+
+func (cl *Cluster) DeleteBackupSchedule(ctx context.Context, id string) (task *Task, err error) {
+	var upid UPID
+	if err = cl.client.Delete(ctx, fmt.Sprintf("/cluster/backup/%s", id), &upid); err != nil {
+		return nil, err
+	}
+
+	return NewTask(upid, cl.client), nil
+}
+
 
 func (cl *Cluster) Tasks(ctx context.Context) (Tasks, error) {
 	var tasks Tasks
