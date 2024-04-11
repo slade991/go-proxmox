@@ -58,7 +58,7 @@ func (cl *Cluster) Backups(ctx context.Context, params *ClusterBackupsOptions) (
 		params = &ClusterBackupsOptions{}
 	}
 
-	if err = cl.client.Post(ctx, fmt.Sprintf("/cluster/backup", cl.Name), params, &upid); err != nil {
+	if err = cl.client.Post(ctx, "/cluster/backup", params, &upid); err != nil {
 		return nil, err
 	}
 	return NewTask(upid, cl.client), nil
