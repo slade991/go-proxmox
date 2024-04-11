@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -48,6 +49,20 @@ func (cl *Cluster) Resources(ctx context.Context, filters ...string) (rs Cluster
 	}
 
 	return rs, cl.client.Get(ctx, u.String(), &rs)
+}
+
+func (cl *Cluster) Backups(ctx context.Context, params *ClusterBackupsOptions) (task *Task, err error) {
+	var upid UPID
+
+	if params == nil {
+		params = &ClusterBackupsOptions{}
+	}
+
+	if err = cl.client.Post(ctx, fmt.Sprintf("/cluster/backup", cl.Name), params, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, cl.client), nil
+
 }
 
 func (cl *Cluster) Tasks(ctx context.Context) (Tasks, error) {

@@ -1313,6 +1313,46 @@ type VirtualMachineBackupOptions struct {
 	Zstd               uint                                   `json:"zstd,omitempty"`
 }
 
+type ClusterBackupsOptions struct {
+	All                bool                                   `json:"all,omitempty"`
+	BwLimit            uint                                   `json:"bwlimit,omitempty"`
+	Comment            string                                 `json:"comment,omitempty"`
+	Compress           VirtualMachineBackupCompress           `json:"compress,omitempty"`
+	Dow                string                                 `json:"dow,omitempty"`
+	DumpDir            string                                 `json:"dumpDir,omitempty"`
+	Enable             bool                                   `json:"enable,omitempty"`
+	Exclude            string                                 `json:"exclude,omitempty"`
+	ExcludePath        []string                               `json:"exclude-path,omitempty"`
+	Id                 string                                 `json:"id,omitempty"`
+	IoNice             uint                                   `json:"ionice,omitempty"`
+	LockWait           uint                                   `json:"lockwait,omitempty"`
+	MailTo             string                                 `json:"mailto,omitempty"`
+	MaxFiles           uint                                   `json:"maxfiles,omitempty"`
+	Mode               VirtualMachineBackupMode               `json:"mode,omitempty"`
+	Node               string                                 `json:"node,omitempty"`
+	NotesTemplate      string                                 `json:"notes-template,omitempty"`
+	NotificationMode   string                                 `json:"notification-mode,omitempty"`
+	NotificationPolicy VirtualMachineBackupNotificationPolicy `json:"notification-policy,omitempty"`
+	NotificationTarget string                                 `json:"notification-target,omitempty"`
+	Performance        string                                 `json:"performance,omitempty"`
+	Pigz               int                                    `json:"pigz,omitempty"`
+	Pool               string                                 `json:"pool,omitempty"`
+	Protected          bool                                   `json:"protected,omitempty"`
+	PruneBackups       string                                 `json:"prune-backups,omitempty"`
+	Quiet              bool                                   `json:"quiet,omitempty"`
+	Remove             bool                                   `json:"remove,omitempty"`
+	RepeatMissed       bool                                   `json:"repeat-missed,omitempty"`
+	Schedule           string                                 `json:"schedule,omitempty"`
+	Script             string                                 `json:"script,omitempty"`
+	StdExcludes        bool                                   `json:"stdexcludes,omitempty"`
+	Stop               bool                                   `json:"stop,omitempty"`
+	StopWait           uint                                   `json:"stopwait,omitempty"`
+	Storage            string                                 `json:"storage,omitempty"`
+	TmpDir             string                                 `json:"tmpdir,omitempty"`
+	VMID               uint64                                 `json:"vmid,omitempty"`
+	Zstd               uint                                   `json:"zstd,omitempty"`
+}
+
 type Separator = string
 
 const (
