@@ -66,7 +66,7 @@ func (cl *Cluster) Backups(ctx context.Context, params *ClusterBackupsOptions) (
 func (cl *Cluster) GetBackups(ctx context.Context) (*[]ClusterBackupSchedule, error) {
 	var backups *[]ClusterBackupSchedule
 
-	if err := cl.client.Get(ctx, "/cluster/backups", &backups); err != nil {
+	if err := cl.client.Get(ctx, "/cluster/backup", &backups); err != nil {
 		return nil, err
 	}
 
