@@ -552,6 +552,13 @@ type VirtualMachineMigrateOptions struct {
 	WithLocalDisks   IntOrBool `json:"with-local-disks,omitempty"`
 }
 
+type ContainerMigrateOptions struct {
+	Target  string    `json:"target"`
+	BWLimit uint64    `json:"bwlimit,omitempty"`
+	Online  IntOrBool `json:"online,omitempty"`
+	Restart IntOrBool `json:"restart,omitempty"`
+}
+
 type VirtualMachineCloneOptions struct {
 	NewID       int    `json:"newid"`
 	BWLimit     uint64 `json:"bwlimit,omitempty"`
@@ -579,7 +586,7 @@ type VirtualMachineMoveDiskOptions struct {
 
 type UPID string
 
-type Tasks []*Tasks
+type Tasks []*Task
 type Task struct {
 	client       *Client
 	UPID         UPID
@@ -665,6 +672,15 @@ type Container struct {
 	Tags    string
 }
 
+type ContainerInterfaces []*ContainerInterface
+
+type ContainerInterface struct {
+	HWAddr string `json:"hwaddr,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Inet   string `json:"inet,omitempty"`
+	Inet6  string `json:"inet6,omitempty"`
+}
+
 type ContainerCloneOptions struct {
 	NewID       int    `json:"newid"`
 	BWLimit     uint64 `json:"bwlimit,omitempty"`
@@ -675,11 +691,6 @@ type ContainerCloneOptions struct {
 	SnapName    string `json:"snapname,omitempty"`
 	Storage     string `json:"storage,omitempty"`
 	Target      string `json:"target,omitempty"`
-}
-
-type ContainerStatuses []*ContainerStatus
-type ContainerStatus struct {
-	Data string `json:",omitempty"`
 }
 
 // ContainerOptions A key/value pair used to modify a container(LXC) config
@@ -919,10 +930,10 @@ type AgentOsInfo struct {
 }
 
 type AgentExecStatus struct {
-	Exited       bool   `json:"exited"`
+	Exited       int    `json:"exited"`
 	ErrData      string `json:"err-data"`
 	ErrTruncated bool   `json:"err-truncated"`
-	ExitCode     int    `json:"exit-code"`
+	ExitCode     int    `json:"exitcode"`
 	OutData      string `json:"out-data"`
 	OutTruncated string `json:"out-truncated"`
 	Signal       bool   `json:"signal"`
@@ -1150,4 +1161,324 @@ type StorageDownloadURLOptions struct {
 	ChecksumAlgorithm  string    `json:"checksum-algorithm,omitempty"`
 	Compression        string    `json:"compression,omitempty"`
 	VerifyCertificates IntOrBool `json:"verify-certificates,omitempty"`
+}
+
+type StorageContent struct {
+	Format       string `json:"format,omitempty"`
+	Size         uint64 `json:"size,omitempty"`
+	Volid        string `json:"volid,omitempty"`
+	Ctime        uint64 `json:"ctime,omitempty"`
+	Encryption   string `json:"encryption,omitempty"`
+	Notes        string `json:"notes,omitempty"`
+	Parent       string `json:"parent,omitempty"`
+	Protection   bool   `json:"protection,omitempty"`
+	Used         uint64 `json:"used,omitempty"`
+	Verification string `json:"verification,omitempty"`
+	VMID         uint64 `json:"vmid,omitempty"`
+}
+
+type NodeCertificates []*NodeCertificate
+
+type NodeCertificate struct {
+	Filename      string   `json:"filename,omitempty"`
+	Fingerprint   string   `json:"fingerprint,omitempty"`
+	Issuer        string   `json:"issuer,omitempty"`
+	NotAfter      string   `json:"not-after,omitempty"`
+	NotBefore     string   `json:"not-before,omitempty"`
+	Pem           string   `json:"pem,omitempty"`
+	PublicKeyBits int      `json:"public-key-bits,omitempty"`
+	PublicKeyType string   `json:"public-key-type,omitempty"`
+	San           []string `json:"san,omitempty"`
+	Subject       string   `json:"subject,omitempty"`
+}
+
+type CustomCertificate struct {
+	Certificates string `json:"certificates,omitempty"` // PEM encoded certificate (chain)
+	Force        bool   `json:"force,omitempty"`        // overwrite existing certificate
+	Key          string `json:"key,omitempty"`          // PEM encoded private key
+	Restart      bool   `json:"restart,omitempty"`      // restart pveproxy
+}
+
+type NewUser struct {
+	UserID    string   `json:"userid"`
+	Comment   string   `json:"comment,omitempty"`
+	Email     string   `json:"email,omitempty"`
+	Enable    bool     `json:"enable,omitempty"`
+	Expire    int      `json:"expire,omitempty"`
+	Firstname string   `json:"firstname,omitempty"`
+	Groups    []string `json:"groups,omitempty"`
+	Keys      []string `json:"keys,omitempty"`
+	Lastname  string   `json:"lastname,omitempty"`
+	Password  string   `json:"password,omitempty"`
+}
+
+type TFA struct {
+	Realm string   `json:"realm,omitempty"`
+	Types []string `json:"types,omitempty"`
+	User  string   `json:"user,omitempty"`
+}
+
+type NewAPIToken struct {
+	FullTokenID string      `json:"full-tokenid,omitempty"`
+	Info        interface{} `json:"info,omitempty"`
+	Value       string      `json:"value,omitempty"`
+}
+
+type VNCProxyOptions struct {
+	Websocket string `json:"websocket,omitempty"`
+	Height    int    `json:"height,omitempty"`
+	Width     int    `json:"width,omitempty"`
+}
+
+type ContainerSnapshot struct {
+	Description          string `json:"description,omitempty"`
+	Name                 string `json:"snapname,omitempty"`
+	Parent               string `json:"parent,omitempty"`
+	SnapshotCreationTime int64  `json:"snaptime,omitempty"`
+}
+
+type Firewall struct {
+	Aliases []*FirewallAlias    `json:"aliases,omitempty"`
+	Ipset   []*FirewallIPSet    `json:"ipset,omitempty"`
+	Rules   []*FirewallRule     `json:"rules,omitempty"`
+	Options *FirewallNodeOption `json:"options,omitempty"`
+	// Refs 	map[string]string `json:"refs,omitempty"`
+}
+
+type FirewallAlias struct {
+	Cidr    string `json:"cidr,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Comment string `json:"comment,omitempty"`
+}
+
+type FirewallIPSet struct {
+	Name    string `json:"name,omitempty"`
+	Digest  string `json:"digest,omitempty"`
+	Comment string `json:"comment,omitempty"`
+}
+
+type (
+	VirtualMachineBackupMode               = string
+	VirtualMachineBackupCompress           = string
+	VirtualMachineBackupNotificationPolicy = string
+)
+
+const (
+	VirtualMachineBackupModeSnapshot = VirtualMachineBackupMode("snapshot")
+	VirtualMachineBackupModeSuspend  = VirtualMachineBackupMode("suspend")
+	VirtualMachineBackupModeStop     = VirtualMachineBackupMode("stop")
+
+	VirtualMachineBackupCompressZero = VirtualMachineBackupCompress("0")
+	VirtualMachineBackupCompressOne  = VirtualMachineBackupCompress("1")
+	VirtualMachineBackupCompressGzip = VirtualMachineBackupCompress("gzip")
+	VirtualMachineBackupCompressLzo  = VirtualMachineBackupCompress("lzo")
+	VirtualMachineBackupCompressZstd = VirtualMachineBackupCompress("zstd")
+
+	VirtualMachineBackupNotificationPolicyAlways  = VirtualMachineBackupNotificationPolicy("always")
+	VirtualMachineBackupNotificationPolicyFailure = VirtualMachineBackupNotificationPolicy("failure")
+	VirtualMachineBackupNotificationPolicyNever   = VirtualMachineBackupNotificationPolicy("never")
+)
+
+type VirtualMachineBackupOptions struct {
+	All                bool                                   `json:"all,omitempty"`
+	BwLimit            uint                                   `json:"bwlimit,omitempty"`
+	Compress           VirtualMachineBackupCompress           `json:"compress,omitempty"`
+	DumpDir            string                                 `json:"dumpDir,omitempty"`
+	Exclude            string                                 `json:"exclude,omitempty"`
+	ExcludePath        []string                               `json:"exclude-path,omitempty"`
+	IoNice             uint                                   `json:"ionice,omitempty"`
+	LockWait           uint                                   `json:"lockwait,omitempty"`
+	MailTo             string                                 `json:"mailto,omitempty"`
+	Mode               VirtualMachineBackupMode               `json:"mode,omitempty"`
+	Node               string                                 `json:"node,omitempty"`
+	NotesTemplate      string                                 `json:"notes-template,omitempty"`
+	NotificationPolicy VirtualMachineBackupNotificationPolicy `json:"notification-policy,omitempty"`
+	NotificationTarget string                                 `json:"notification-target,omitempty"`
+	Performance        string                                 `json:"performance,omitempty"`
+	Pigz               int                                    `json:"pigz,omitempty"`
+	Pool               string                                 `json:"pool,omitempty"`
+	Protected          string                                 `json:"protected,omitempty"`
+	PruneBackups       string                                 `json:"prune-backups,omitempty"`
+	Quiet              bool                                   `json:"quiet,omitempty"`
+	Remove             bool                                   `json:"remove,omitempty"`
+	Script             string                                 `json:"script,omitempty"`
+	StdExcludes        bool                                   `json:"stdexcludes,omitempty"`
+	StdOut             bool                                   `json:"stdout,omitempty"`
+	Stop               bool                                   `json:"stop,omitempty"`
+	StopWait           uint                                   `json:"stopwait,omitempty"`
+	Storage            string                                 `json:"storage,omitempty"`
+	TmpDir             string                                 `json:"tmpdir,omitempty"`
+	VMID               uint64                                 `json:"vmid,omitempty"`
+	Zstd               uint                                   `json:"zstd,omitempty"`
+}
+
+type Separator = string
+
+const (
+	StringSeparator = Separator("\n")
+	FieldSeparator  = Separator(":")
+	SpaceSeparator  = Separator(" ")
+)
+
+type VzdumpConfig struct {
+	Boot       string `json:"boot"`
+	CiPassword string `json:"cipassword"`
+	CiUser     string `json:"ciuser"`
+	Cores      uint64 `json:"cores,string"`
+	Memory     uint64 `json:"memory,string"`
+	Meta       string `json:"meta"`
+	Numa       string `json:"numa"`
+	OsType     string `json:"ostype"`
+	Scsihw     string `json:"scsihw"`
+	Sockets    uint64 `json:"sockets,string"`
+	SSHKeys    string `json:"sshkeys"`
+	VmgenID    string `json:"vmgenid"`
+
+	IDE0 string `json:"ide0,omitempty"`
+	IDE1 string `json:"ide1,omitempty"`
+	IDE2 string `json:"ide2,omitempty"`
+	IDE3 string `json:"ide3,omitempty"`
+
+	SCSI0  string `json:"scsi0,omitempty"`
+	SCSI1  string `json:"scsi1,omitempty"`
+	SCSI2  string `json:"scsi2,omitempty"`
+	SCSI3  string `json:"scsi3,omitempty"`
+	SCSI4  string `json:"scsi4,omitempty"`
+	SCSI5  string `json:"scsi5,omitempty"`
+	SCSI6  string `json:"scsi6,omitempty"`
+	SCSI7  string `json:"scsi7,omitempty"`
+	SCSI8  string `json:"scsi8,omitempty"`
+	SCSI9  string `json:"scsi9,omitempty"`
+	SCSI10 string `json:"scsi10,omitempty"`
+	SCSI11 string `json:"scsi11,omitempty"`
+	SCSI12 string `json:"scsi12,omitempty"`
+	SCSI13 string `json:"scsi13,omitempty"`
+	SCSI14 string `json:"scsi14,omitempty"`
+	SCSI15 string `json:"scsi15,omitempty"`
+	SCSI16 string `json:"scsi16,omitempty"`
+	SCSI17 string `json:"scsi17,omitempty"`
+	SCSI18 string `json:"scsi18,omitempty"`
+	SCSI19 string `json:"scsi19,omitempty"`
+	SCSI20 string `json:"scsi20,omitempty"`
+	SCSI21 string `json:"scsi21,omitempty"`
+	SCSI22 string `json:"scsi22,omitempty"`
+	SCSI23 string `json:"scsi23,omitempty"`
+	SCSI24 string `json:"scsi24,omitempty"`
+	SCSI25 string `json:"scsi25,omitempty"`
+	SCSI26 string `json:"scsi26,omitempty"`
+	SCSI27 string `json:"scsi27,omitempty"`
+	SCSI28 string `json:"scsi28,omitempty"`
+	SCSI29 string `json:"scsi29,omitempty"`
+	SCSI30 string `json:"scsi30,omitempty"`
+
+	SATA0 string `json:"sata0,omitempty"`
+	SATA1 string `json:"sata1,omitempty"`
+	SATA2 string `json:"sata2,omitempty"`
+	SATA3 string `json:"sata3,omitempty"`
+	SATA4 string `json:"sata4,omitempty"`
+	SATA5 string `json:"sata5,omitempty"`
+
+	VirtIO0  string `json:"virtio0,omitempty"`
+	VirtIO1  string `json:"virtio1,omitempty"`
+	VirtIO2  string `json:"virtio2,omitempty"`
+	VirtIO3  string `json:"virtio3,omitempty"`
+	VirtIO4  string `json:"virtio4,omitempty"`
+	VirtIO5  string `json:"virtio5,omitempty"`
+	VirtIO6  string `json:"virtio6,omitempty"`
+	VirtIO7  string `json:"virtio7,omitempty"`
+	VirtIO8  string `json:"virtio8,omitempty"`
+	VirtIO9  string `json:"virtio9,omitempty"`
+	VirtIO10 string `json:"virtio10,omitempty"`
+	VirtIO11 string `json:"virtio11,omitempty"`
+	VirtIO12 string `json:"virtio12,omitempty"`
+	VirtIO13 string `json:"virtio13,omitempty"`
+	VirtIO14 string `json:"virtio14,omitempty"`
+	VirtIO15 string `json:"virtio15,omitempty"`
+
+	Unused0 string `json:"unused0,omitempty"`
+	Unused1 string `json:"unused1,omitempty"`
+	Unused2 string `json:"unused2,omitempty"`
+	Unused3 string `json:"unused3,omitempty"`
+	Unused4 string `json:"unused4,omitempty"`
+	Unused5 string `json:"unused5,omitempty"`
+	Unused6 string `json:"unused6,omitempty"`
+	Unused7 string `json:"unused7,omitempty"`
+	Unused8 string `json:"unused8,omitempty"`
+	Unused9 string `json:"unused9,omitempty"`
+
+	// Network devices
+	Net0 string `json:"net0,omitempty"`
+	Net1 string `json:"net1,omitempty"`
+	Net2 string `json:"net2,omitempty"`
+	Net3 string `json:"net3,omitempty"`
+	Net4 string `json:"net4,omitempty"`
+	Net5 string `json:"net5,omitempty"`
+	Net6 string `json:"net6,omitempty"`
+	Net7 string `json:"net7,omitempty"`
+	Net8 string `json:"net8,omitempty"`
+	Net9 string `json:"net9,omitempty"`
+
+	// NUMA topology
+	Numa0 string `json:"numa0,omitempty"`
+	Numa1 string `json:"numa1,omitempty"`
+	Numa2 string `json:"numa2,omitempty"`
+	Numa3 string `json:"numa3,omitempty"`
+	Numa4 string `json:"numa4,omitempty"`
+	Numa5 string `json:"numa5,omitempty"`
+	Numa6 string `json:"numa6,omitempty"`
+	Numa7 string `json:"numa7,omitempty"`
+	Numa8 string `json:"numa8,omitempty"`
+	Numa9 string `json:"numa9,omitempty"`
+
+	// Host PCI devices
+	HostPCI0 string `json:"hostpci0,omitempty"`
+	HostPCI1 string `json:"hostpci1,omitempty"`
+	HostPCI2 string `json:"hostpci2,omitempty"`
+	HostPCI3 string `json:"hostpci3,omitempty"`
+	HostPCI4 string `json:"hostpci4,omitempty"`
+	HostPCI5 string `json:"hostpci5,omitempty"`
+	HostPCI6 string `json:"hostpci6,omitempty"`
+	HostPCI7 string `json:"hostpci7,omitempty"`
+	HostPCI8 string `json:"hostpci8,omitempty"`
+	HostPCI9 string `json:"hostpci9,omitempty"`
+
+	// Serial devices
+	Serial0 string `json:"serial0,omitempty"`
+	Serial1 string `json:"serial1,omitempty"`
+	Serial2 string `json:"serial2,omitempty"`
+	Serial3 string `json:"serial3,omitempty"`
+
+	// USB devices
+	USB0  string `json:"usb0,omitempty"`
+	USB1  string `json:"usb1,omitempty"`
+	USB2  string `json:"usb2,omitempty"`
+	USB3  string `json:"usb3,omitempty"`
+	USB4  string `json:"usb4,omitempty"`
+	USB5  string `json:"usb5,omitempty"`
+	USB6  string `json:"usb6,omitempty"`
+	USB7  string `json:"usb7,omitempty"`
+	USB8  string `json:"usb8,omitempty"`
+	USB9  string `json:"usb9,omitempty"`
+	USB10 string `json:"usb10,omitempty"`
+	USB11 string `json:"usb11,omitempty"`
+	USB12 string `json:"usb12,omitempty"`
+	USB13 string `json:"usb13,omitempty"`
+	USB14 string `json:"usb14,omitempty"`
+
+	Parallel0 string `json:"parallel0,omitempty"`
+	Parallel1 string `json:"parallel1,omitempty"`
+	Parallel2 string `json:"parallel2,omitempty"`
+
+	// Cloud-init
+	IPConfig0 string `json:"ipconfig0,omitempty"`
+	IPConfig1 string `json:"ipconfig1,omitempty"`
+	IPConfig2 string `json:"ipconfig2,omitempty"`
+	IPConfig3 string `json:"ipconfig3,omitempty"`
+	IPConfig4 string `json:"ipconfig4,omitempty"`
+	IPConfig5 string `json:"ipconfig5,omitempty"`
+	IPConfig6 string `json:"ipconfig6,omitempty"`
+	IPConfig7 string `json:"ipconfig7,omitempty"`
+	IPConfig8 string `json:"ipconfig8,omitempty"`
+	IPConfig9 string `json:"ipconfig9,omitempty"`
 }

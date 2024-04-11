@@ -55,6 +55,10 @@ func (v *VirtualMachine) VNCWebSocket(ctx context.Context, vnc *VNC) (port map[s
 }
 
 func (v *VirtualMachine) HasTag(value string) bool {
+	if v.VirtualMachineConfig == nil {
+		return false
+	}
+
 	if v.VirtualMachineConfig.Tags == "" {
 		return false
 	}
@@ -501,15 +505,20 @@ func (v *VirtualMachine) WaitForAgent(ctx context.Context, seconds int) error {
 	}
 }
 
-func (v *VirtualMachine) AgentExec(ctx context.Context, command, inputData string) (pid int, err error) {
+func (v *VirtualMachine) AgentExec(ctx context.Context, command []string, inputData string) (pid int, err error) {
 	tmpdata := map[string]interface{}{}
 	err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec", v.Node, v.VMID),
-		map[string]string{
+		map[string]interface{}{
 			"command":    command,
 			"input-data": inputData,
 		},
 		&tmpdata)
-	pid = int(tmpdata["pid"].(float64))
+
+	p := tmpdata["pid"]
+	if p == nil {
+		return 0, fmt.Errorf("no pid returned from agent exec command")
+	}
+	pid = int(p.(float64))
 	return
 }
 
@@ -532,7 +541,7 @@ func (v *VirtualMachine) WaitForAgentExecExit(ctx context.Context, pid, seconds 
 		if err != nil {
 			return nil, err
 		}
-		if status.Exited {
+		if status.Exited != 0 {
 			return status, nil
 		}
 
@@ -634,4 +643,31 @@ func (v *VirtualMachine) RRDData(ctx context.Context, timeframe Timeframe, conso
 
 	err = v.client.Get(ctx, u.String(), &rrddata)
 	return
+}
+
+func (v *VirtualMachine) ConvertToTemplate(ctx context.Context) (task *Task, err error) {
+	var upid UPID
+	if err = v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/template", v.Node, v.VMID), nil, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, v.client), nil
+}
+
+func (v *VirtualMachine) UnmountCloudInitISO(ctx context.Context, device string) error {
+	if !v.HasTag(MakeTag(TagCloudInit)) {
+		return nil
+	}
+
+	_, err := v.Config(ctx, VirtualMachineOption{
+		Name:  device,
+		Value: "none,media=cdrom",
+	})
+	if err != nil {
+		return err
+	}
+
+	if _, err = v.deleteCloudInitISO(ctx); err != nil {
+		return err
+	}
+	return nil
 }

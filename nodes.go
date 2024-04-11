@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -102,6 +103,29 @@ func (n *Node) Container(ctx context.Context, vmid int) (*Container, error) {
 	c.Node = n.Name
 
 	return &c, nil
+}
+
+func (n *Node) NewContainer(ctx context.Context, vmid int, options ...ContainerOption) (*Task, error) {
+	var upid UPID
+	data := make(map[string]interface{})
+	if vmid <= 0 {
+		cluster, err := n.client.Cluster(ctx)
+		if err != nil {
+			return nil, err
+		}
+		vmid, err = cluster.NextID(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	data["vmid"] = vmid
+
+	for _, option := range options {
+		data[option.Name] = option.Value
+	}
+
+	err := n.client.Post(ctx, fmt.Sprintf("/nodes/%s/lxc", n.Name), data, &upid)
+	return NewTask(upid, n.client), err
 }
 
 func (n *Node) Appliances(ctx context.Context) (appliances Appliances, err error) {
@@ -239,4 +263,67 @@ func (n *Node) FirewallRulesUpdate(ctx context.Context, rule *FirewallRule) erro
 
 func (n *Node) FirewallRulesDelete(ctx context.Context, rulePos int) error {
 	return n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/firewall/rules/%d", n.Name, rulePos), nil)
+}
+
+func (n *Node) UploadCustomCertificate(ctx context.Context, cert *CustomCertificate) error {
+	return n.client.Post(ctx, fmt.Sprintf("/nodes/%s/certificates/custom", n.Name), cert, nil)
+}
+
+func (n *Node) DeleteCustomCertificate(ctx context.Context) error {
+	return n.client.Delete(ctx, fmt.Sprintf("/nodes/%s/certificates/custom", n.Name), nil)
+}
+
+func (n *Node) GetCustomCertificates(ctx context.Context) (certs *NodeCertificates, err error) {
+	err = n.client.Get(ctx, fmt.Sprintf("/nodes/%s/certificates/info", n.Name), &certs)
+	return
+}
+
+func (n *Node) Vzdump(ctx context.Context, params *VirtualMachineBackupOptions) (task *Task, err error) {
+	var upid UPID
+
+	if params == nil {
+		params = &VirtualMachineBackupOptions{}
+	}
+
+	if err = n.client.Post(ctx, fmt.Sprintf("/nodes/%s/vzdump", n.Name), params, &upid); err != nil {
+		return nil, err
+	}
+	return NewTask(upid, n.client), nil
+}
+
+func (n *Node) VzdumpExtractConfig(ctx context.Context, volume string) (*VzdumpConfig, error) {
+	var vzdumpExtractedConfig string
+
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/vzdump/extractconfig?volume=%s", n.Name, volume), &vzdumpExtractedConfig); err != nil {
+		return nil, err
+	}
+
+	return n.parseVzdumpConfig(vzdumpExtractedConfig)
+}
+
+func (n *Node) parseVzdumpConfig(vzdumpExtractedConfig string) (*VzdumpConfig, error) {
+	vzdumpFields := strings.Split(vzdumpExtractedConfig, StringSeparator)
+
+	configFields := make(map[string]any)
+
+	for _, field := range vzdumpFields {
+		if field != "" {
+			newStr := strings.SplitN(field, FieldSeparator, 2)
+			if len(newStr) == 2 {
+				configFields[newStr[0]] = strings.Trim(newStr[1], SpaceSeparator)
+			}
+		}
+	}
+
+	jsonData, err := json.Marshal(configFields)
+	if err != nil {
+		return nil, fmt.Errorf("cannot present vzdump config as json string : %w", err)
+	}
+
+	vzdumpCfg := &VzdumpConfig{}
+	if err := json.Unmarshal(jsonData, vzdumpCfg); err != nil {
+		return nil, fmt.Errorf("cannot parse data for vzdump config : %w", err)
+	}
+
+	return vzdumpCfg, nil
 }
