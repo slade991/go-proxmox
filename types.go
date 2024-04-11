@@ -980,10 +980,6 @@ type FirewallRule struct {
 	Sport    string `json:"sport,omitempty"`
 }
 
-type BackupSchedule struct {
-    Id string `json:"id,omitempty"`
-}
-
 func (r *FirewallRule) IsEnable() bool {
 	return 1 == r.Enable
 }
