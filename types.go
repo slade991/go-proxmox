@@ -750,6 +750,24 @@ type VzTmpl struct{ Content }
 type Backups []*Backup
 type Backup struct{ Content }
 
+
+type ClusterBackupSchedule struct {
+    Enabled             bool                `json:"enabled,omitempty"`
+    Schedule            string              `json:"schedule,omitempty"`
+    Id                  string              `json:"id,omitempty"`
+    RepeatMissed        string              `json:"repeat-missed,omitempty"`
+    NotesTemplate       string              `json:"notes-template,omitempty"`
+    MailNotification    string              `json:"mailnotification,omitempty"`
+    All                 bool                `json:"all,omitempty"`
+    PruneBackups        map[string]string   `json:"prune-backups,omitempty"` 
+    Mode                string              `json:"mode,omitempty"` 
+    Type                string              `json:"type,omitempty"` 
+    NextRun             uint                `json:"next-run,omitempty"` 
+    Storage             string              `json:"storage,omitempty"` 
+    VMID                uint                `json:"vmid,omitempty"` 
+    Remove              bool                `json:"remove,omitempty"` 
+}
+
 type Content struct {
 	client  *Client
 	URL     string
@@ -960,6 +978,10 @@ type FirewallRule struct {
 	Proto    string `json:"proto,omitempty"`
 	Source   string `json:"source,omitempty"`
 	Sport    string `json:"sport,omitempty"`
+}
+
+type BackupSchedule struct {
+    Id string `json:"id,omitempty"`
 }
 
 func (r *FirewallRule) IsEnable() bool {
