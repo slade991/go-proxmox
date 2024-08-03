@@ -94,6 +94,21 @@ func (v *VirtualMachine) AddTag(ctx context.Context, value string) (*Task, error
 	})
 }
 
+func (c *VirtualMachine) GetFirewallIPSet(ctx context.Context) (ipsets []*FirewallIPSet, err error) {
+	return ipsets, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", c.Node, c.VMID), &ipsets)
+}
+
+func (c *VirtualMachine) NewFirewallIPSet(ctx context.Context, ipset *FirewallIPSet) error {
+	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", c.Node, c.VMID), ipset, nil)
+}
+
+func (c *VirtualMachine) DeleteFirewallIPSet(ctx context.Context, name string, force bool) error {
+	return c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", c.Node, c.VMID, name), map[string]interface{}{"force": force})
+}
+func (c *VirtualMachine) AddCidrToFirewallIpSet(ctx context.Context, ipsetCidr *FirewallIPSetCidr) error {
+	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", c.Node, c.VMID, ipsetCidr.Name), ipsetCidr , nil)
+}
+
 func (v *VirtualMachine) RemoveTag(ctx context.Context, value string) (*Task, error) {
 	if !v.HasTag(value) {
 		return nil, ErrNoop
