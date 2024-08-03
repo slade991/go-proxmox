@@ -106,6 +106,8 @@ func (c *VirtualMachine) DeleteFirewallIPSet(ctx context.Context, name string, f
 	return c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", c.Node, c.VMID, name), map[string]interface{}{"force": force})
 }
 func (c *VirtualMachine) AddCidrToFirewallIpSet(ctx context.Context, ipsetCidr *FirewallIPSetCidr) error {
+    ipsetCidr.Vmid = int64(c.VMID)
+    ipsetCidr.Node = c.Node
 	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", c.Node, c.VMID, ipsetCidr.Name), ipsetCidr , nil)
 }
 
