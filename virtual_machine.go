@@ -148,7 +148,7 @@ func (v *VirtualMachine) SplitTags() {
 func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metadata, vendordata, networkconfig string) error {
 	isoName := fmt.Sprintf(UserDataISOFormat, v.VMID)
 	// create userdata iso file on the local fs
-	iso, err := makeCloudInitISO(isoName, userdata, metadata, vendordata, networkconfig)
+	isofilename, err := makeCloudInitISO(isoName, userdata, metadata, vendordata, networkconfig)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		return err
 	}
 
-	task, err := storage.Upload("iso", iso.Name())
+	task, err := storage.Upload("iso", isofilename)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,6 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 		Name:  "boot",
 		Value: fmt.Sprintf("%s;%s", v.VirtualMachineConfig.Boot, device),
 	})
-
 	if err != nil {
 		return err
 	}
