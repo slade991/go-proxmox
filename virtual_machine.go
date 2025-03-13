@@ -1,15 +1,16 @@
 package proxmox
 
 import (
-	"context"
-	"fmt"
-	"net/url"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
+    "context"
+    "fmt"
+    "net/url"
+    "os"
+    "path/filepath"
+    "strings"
+    "time"
 
-	"github.com/diskfs/go-diskfs/filesystem/iso9660"
+    "github.com/diskfs/go-diskfs/filesystem/iso9660"
+    "github.com/diskfs/go-diskfs/backend/file"
 )
 
 const (
@@ -196,10 +197,11 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 	return task.WaitFor(ctx, 2)
 }
 
-func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (iso *os.File, err error) {
-	iso, err = os.Create(filepath.Join(os.TempDir(), filename))
+func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (isopath string, err error) {
+	isopath = filepath.Join(os.TempDir(), filename)
+	iso, err := file.OpenFromPath(isopath, false)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	defer func() {
@@ -208,11 +210,11 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 
 	fs, err := iso9660.Create(iso, 0, 0, blockSize, "")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	if err := fs.Mkdir("/"); err != nil {
-		return nil, err
+	if err = fs.Mkdir("/"); err != nil {
+		return "", err
 	}
 
 	cifiles := map[string]string{
@@ -229,11 +231,11 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 	for filename, content := range cifiles {
 		rw, err := fs.OpenFile("/"+filename, os.O_CREATE|os.O_RDWR)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
-		if _, err := rw.Write([]byte(content)); err != nil {
-			return nil, err
+		if _, err = rw.Write([]byte(content)); err != nil {
+			return "", err
 		}
 	}
 
@@ -241,11 +243,12 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 		RockRidge:        true,
 		VolumeIdentifier: volumeIdentifier,
 	}); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return
 }
+
 
 // VNCWebSocket copy/paste when calling to get the channel names right
 // send, recv, errors, closer, errors := vm.VNCWebSocket(vnc)
