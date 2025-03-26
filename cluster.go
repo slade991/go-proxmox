@@ -64,6 +64,15 @@ func (cl *Cluster) Backups(ctx context.Context, params *ClusterBackupsOptions) (
 	return NewTask(upid, cl.client), nil
 }
 
+func (cl *Cluster) UpdateBackup(ctx context.Context, idBackup string, params *ClusterBackupsOptions ) (task *Task, err error) {
+    var upid UPID
+
+    if err = cl.client.Put(ctx, "/cluster/backup/"+idBackup, params, &upid); err != nil {
+        return nil, err
+    }
+    return NewTask(upid, cl.client), nil
+}
+
 func (cl *Cluster) GetBackups(ctx context.Context) (*[]ClusterBackupSchedule, error) {
 	var backups *[]ClusterBackupSchedule
 

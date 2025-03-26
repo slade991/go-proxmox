@@ -766,6 +766,7 @@ type ClusterBackupSchedule struct {
     Storage             string              `json:"storage,omitempty"` 
     VMID                string              `json:"vmid,omitempty"` 
     Remove              uint                `json:"remove,omitempty"` 
+    Exclude             string              `json:"exclude,omitempty"`
 }
 
 type Content struct {
@@ -1347,6 +1348,7 @@ type ClusterBackupsOptions struct {
     DumpDir            string                                 `json:"dumpDir,omitempty"`
     Enable             bool                                   `json:"enable,omitempty"`
     Exclude            string                                 `json:"exclude,omitempty"`
+    Delete             string                                 `json:"delete,omitempty"`
     ExcludePath        []string                               `json:"exclude-path,omitempty"`
     Id                 string                                 `json:"id,omitempty"`
     IoNice             uint                                   `json:"ionice,omitempty"`
