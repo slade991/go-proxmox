@@ -767,6 +767,7 @@ type ClusterBackupSchedule struct {
     VMID                string              `json:"vmid,omitempty"` 
     Remove              uint                `json:"remove,omitempty"` 
     Exclude             string              `json:"exclude,omitempty"`
+    Node                string              `json:"node,omitempty"`
 }
 
 type Content struct {
