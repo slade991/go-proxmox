@@ -26,12 +26,19 @@ func (n *Node) Version(ctx context.Context) (version *Version, err error) {
 	return version, n.client.Get(ctx, fmt.Sprintf("/nodes/%s/version", n.Name), &version)
 }
 
-func (n *Node) TermProxy(ctx context.Context) (vnc *VNC, err error) {
-	return vnc, n.client.Post(ctx, fmt.Sprintf("/nodes/%s/termproxy", n.Name), nil, &vnc)
+func (n *Node) TermProxy(ctx context.Context) (term *Term, err error) {
+	return term, n.client.Post(ctx, fmt.Sprintf("/nodes/%s/termproxy", n.Name), nil, &term)
+}
+
+func (n *Node) TermWebSocket(term *Term) (chan []byte, chan []byte, chan error, func() error, error) {
+	p := fmt.Sprintf("/nodes/%s/vncwebsocket?port=%d&vncticket=%s",
+		n.Name, term.Port, url.QueryEscape(term.Ticket))
+
+	return n.client.TermWebSocket(p, term)
 }
 
 // VNCWebSocket send, recv, errors, closer, error
-func (n *Node) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, func() error, error) {
+func (n *Node) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan error, func() error, error) {
 	p := fmt.Sprintf("/nodes/%s/vncwebsocket?port=%d&vncticket=%s",
 		n.Name, vnc.Port, url.QueryEscape(vnc.Ticket))
 
@@ -95,14 +102,20 @@ func (n *Node) Containers(ctx context.Context) (c Containers, err error) {
 }
 
 func (n *Node) Container(ctx context.Context, vmid int) (*Container, error) {
-	var c Container
+	c := &Container{
+		client: n.client,
+		Node:   n.Name,
+	}
+
 	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/status/current", n.Name, vmid), &c); err != nil {
 		return nil, err
 	}
-	c.client = n.client
-	c.Node = n.Name
 
-	return &c, nil
+	if err := n.client.Get(ctx, fmt.Sprintf("/nodes/%s/lxc/%d/config", n.Name, vmid), &c.ContainerConfig); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 func (n *Node) NewContainer(ctx context.Context, vmid int, options ...ContainerOption) (*Task, error) {
@@ -229,6 +242,10 @@ func (n *Node) findStorageByContent(ctx context.Context, content string) (storag
 	}
 
 	for _, storage := range storages {
+		if storage.Enabled == 0 {
+			continue
+		}
+
 		if strings.Contains(storage.Content, content) {
 			storage.Node = n.Name
 			storage.client = n.client

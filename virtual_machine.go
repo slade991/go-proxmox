@@ -9,8 +9,8 @@ import (
     "strings"
     "time"
 
-    "github.com/diskfs/go-diskfs/filesystem/iso9660"
     "github.com/diskfs/go-diskfs/backend/file"
+    "github.com/diskfs/go-diskfs/filesystem/iso9660"
 )
 
 const (
@@ -43,16 +43,12 @@ func (v *VirtualMachine) Config(ctx context.Context, options ...VirtualMachineOp
 	return NewTask(upid, v.client), err
 }
 
-func (v *VirtualMachine) TermProxy(ctx context.Context) (vnc *VNC, err error) {
-	return vnc, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/termproxy", v.Node, v.VMID), nil, &vnc)
+func (v *VirtualMachine) TermProxy(ctx context.Context) (term *Term, err error) {
+	return term, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/termproxy", v.Node, v.VMID), nil, &term)
 }
 
-func (v *VirtualMachine) VNCProxy(ctx context.Context) (vnc *VNC, err error) {
-    return vnc, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/vncproxy", v.Node, v.VMID), map[string]interface{}{ "websocket": 1}, &vnc)
-}
-
-func (v *VirtualMachine) VNCWebSocket(ctx context.Context, vnc *VNC) (port map[string]interface{}, err error) {
-    return port, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?node=%s&port=%d&vmid=%d&vncticket=%s", v.Node, v.VMID, v.Node, vnc.Port, v.VMID, url.QueryEscape(vnc.Ticket)), &port)
+func (v *VirtualMachine) VNCProxy(ctx context.Context, config *VNCConfig) (vnc *VNC, err error) {
+	return vnc, v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/vncproxy?", v.Node, v.VMID), config, &vnc)
 }
 
 func (v *VirtualMachine) HasTag(value string) bool {
@@ -198,6 +194,16 @@ func (v *VirtualMachine) CloudInit(ctx context.Context, device, userdata, metada
 
 func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig string) (isopath string, err error) {
 	isopath = filepath.Join(os.TempDir(), filename)
+
+	isoFile, err := os.Create(isopath)
+	if err != nil {
+		return "", err
+	}
+
+	if err := isoFile.Close(); err != nil {
+		return "", err
+	}
+
 	iso, err := file.OpenFromPath(isopath, false)
 	if err != nil {
 		return "", err
@@ -248,19 +254,26 @@ func makeCloudInitISO(filename, userdata, metadata, vendordata, networkconfig st
 	return
 }
 
+func (v *VirtualMachine) TermWebSocket(term *Term) (chan []byte, chan []byte, chan error, func() error, error) {
+	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
+		v.Node, v.VMID, term.Port, url.QueryEscape(term.Ticket))
+
+	return v.client.TermWebSocket(p, term)
+}
 
 // VNCWebSocket copy/paste when calling to get the channel names right
 // send, recv, errors, closer, errors := vm.VNCWebSocket(vnc)
 // for this to work you need to first set up a serial terminal on your vm https://pve.proxmox.com/wiki/Serial_Terminal
-/*func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan string, chan string, chan error, func() error, error) {
-	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket", v.Node, v.VMID)
+func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan error, func() error, error) {
+    p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
+        v.Node, v.VMID, vnc.Port, url.QueryEscape(vnc.Ticket))
 
-	return v.client.VNCWebSocket(p, vnc)
-}*/
+    return v.client.VNCWebSocket(p, vnc)
+}
 
 
 func (v *VirtualMachine) IsRunning() bool {
-	return v.Status == StatusVirtualMachineRunning && v.QMPStatus == StatusVirtualMachineRunning
+	return v.Status == StatusVirtualMachineRunning && (v.QMPStatus == "" || v.QMPStatus == StatusVirtualMachineRunning)
 }
 
 func (v *VirtualMachine) Start(ctx context.Context) (task *Task, err error) {
@@ -273,7 +286,7 @@ func (v *VirtualMachine) Start(ctx context.Context) (task *Task, err error) {
 }
 
 func (v *VirtualMachine) IsStopped() bool {
-	return v.Status == StatusVirtualMachineStopped && v.QMPStatus == StatusVirtualMachineStopped
+	return v.Status == StatusVirtualMachineStopped && (v.Lock != "suspended")
 }
 
 func (v *VirtualMachine) Reset(ctx context.Context) (task *Task, err error) {
@@ -317,7 +330,7 @@ func (v *VirtualMachine) Pause(ctx context.Context) (task *Task, err error) {
 }
 
 func (v *VirtualMachine) IsHibernated() bool {
-	return v.Status == StatusVirtualMachineStopped && v.QMPStatus == StatusVirtualMachineStopped && v.Lock == "suspended"
+	return v.Status == StatusVirtualMachineStopped && v.Lock == "suspended"
 }
 
 func (v *VirtualMachine) Hibernate(ctx context.Context) (task *Task, err error) {
@@ -424,6 +437,8 @@ func (v *VirtualMachine) Clone(ctx context.Context, params *VirtualMachineCloneO
 			return newid, nil, err
 		}
 		params.NewID = newid
+	} else {
+		newid = params.NewID
 	}
 
 	if err := v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/clone", v.Node, v.VMID), params, &upid); err != nil {
@@ -433,16 +448,17 @@ func (v *VirtualMachine) Clone(ctx context.Context, params *VirtualMachineCloneO
 	return newid, NewTask(upid, v.client), nil
 }
 
-func (v *VirtualMachine) ResizeDisk(ctx context.Context, disk, size string) (err error) {
-	err = v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/resize", v.Node, v.VMID), map[string]string{
+func (v *VirtualMachine) ResizeDisk(ctx context.Context, disk, size string) (*Task, error) {
+	var upid UPID
+
+	if err := v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/resize", v.Node, v.VMID), map[string]string{
 		"disk": disk,
 		"size": size,
-	}, nil)
-	if err != nil {
-		return
+	}, &upid); err != nil {
+		return nil, err
 	}
 
-	return
+	return NewTask(upid, v.client), nil
 }
 
 func (v *VirtualMachine) UnlinkDisk(ctx context.Context, diskID string, force bool) (task *Task, err error) {
@@ -492,7 +508,7 @@ func (v *VirtualMachine) AgentGetNetworkIFaces(ctx context.Context) (iFaces []*A
 	}
 	if result, ok := networks["result"]; ok {
 		for _, iface := range result {
-			if "lo" == iface.Name {
+			if iface.Name == "lo" {
 				continue
 			}
 			iFaces = append(iFaces, iface)
@@ -592,6 +608,41 @@ func (v *VirtualMachine) AgentSetUserPassword(ctx context.Context, password stri
 	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", v.Node, v.VMID), map[string]string{"password": password, "username": username}, nil)
 }
 
+func (v *VirtualMachine) GetFirewallIPSet(ctx context.Context) (ipsets []*FirewallIPSet, err error) {
+	return ipsets, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", v.Node, v.VMID), &ipsets)
+}
+
+func (v *VirtualMachine) NewFirewallIPSet(ctx context.Context, ipset FirewallIPSetCreationOption) error {
+	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", v.Node, v.VMID), ipset, nil)
+}
+
+func (v *VirtualMachine) DeleteFirewallIPSet(ctx context.Context, name string, force bool) error {
+	return v.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", v.Node, v.VMID, name), map[string]interface{}{"force": force})
+}
+
+func (v *VirtualMachine) GetFirewallIPSetEntries(ctx context.Context, name string) (entries []*FirewallIPSetEntry, err error) {
+	return entries, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", v.Node, v.VMID, name), &entries)
+}
+
+func (v *VirtualMachine) NewFirewallIPSetEntry(ctx context.Context, name string, entry FirewallIPSetEntryCreationOption) error {
+	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", v.Node, v.VMID, name), entry, nil)
+}
+
+func (v *VirtualMachine) DeleteFirewallIPSetEntry(ctx context.Context, name string, cidr string, digest string) error {
+	return v.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", v.Node, v.VMID, name, cidr), map[string]interface{}{
+		"digest": digest,
+	})
+}
+
+func (v *VirtualMachine) GetFirewallIPSetEntry(ctx context.Context, name string, cidr string) (entry *FirewallIPSetEntry, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", v.Node, v.VMID, name, cidr), &entry)
+	return
+}
+
+func (v *VirtualMachine) UpdateFirewallIPSetEntry(ctx context.Context, name string, cidr string, entry *FirewallIPSetEntryUpdateOption) error {
+	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", v.Node, v.VMID, name, cidr), entry, nil)
+}
+
 func (v *VirtualMachine) FirewallOptionGet(ctx context.Context) (firewallOption *FirewallVirtualMachineOption, err error) {
 	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption)
 	return
@@ -646,15 +697,14 @@ func (v *VirtualMachine) SnapshotRollback(ctx context.Context, name string) (tas
 func (v *VirtualMachine) RRDData(ctx context.Context, timeframe Timeframe, consolidationFunction ...ConsolidationFunction) (rrddata []*RRDData, err error) {
 	u := url.URL{Path: fmt.Sprintf("/nodes/%s/qemu/%d/rrddata", v.Node, v.VMID)}
 
-	// consolidation functions are variadic because they're optional, putting everything into one string and sending that
+	// consolidation functions are variadic because they're optional, but Proxmox only allows one cf parameter
 	params := url.Values{}
 	if len(consolidationFunction) > 0 {
-
-		f := ""
-		for _, cf := range consolidationFunction {
-			f = f + string(cf)
+		if len(consolidationFunction) != 1 {
+			return nil, fmt.Errorf("only one consolidation function allowed")
 		}
-		params.Add("cf", f)
+
+		params.Add("cf", string(consolidationFunction[0]))
 	}
 
 	params.Add("timeframe", string(timeframe))
@@ -689,4 +739,9 @@ func (v *VirtualMachine) UnmountCloudInitISO(ctx context.Context, device string)
 		return err
 	}
 	return nil
+}
+
+func (v *VirtualMachine) Pending(ctx context.Context) (pending *PendingConfiguration, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/pending", v.Node, v.VMID), &pending)
+	return
 }

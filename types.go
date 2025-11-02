@@ -50,12 +50,25 @@ type Version struct {
     Version string `json:"version"`
 }
 
+type Term struct {
+	Port   StringOrInt
+	Ticket string
+	UPID   string
+	User   string
+}
+
+type VNCConfig struct {
+	GeneratePassword bool `json:"generate-password,omitempty"`
+	Websocket        bool `json:"websocket,omitempty"`
+}
+
 type VNC struct {
-    Cert   string
-    Port   StringOrInt
-    Ticket string
-    UPID   string
-    User   string
+	Cert     string
+	Port     StringOrInt
+	Ticket   string
+	UPID     string
+	User     string
+	Password string `json:",omitempty"`
 }
 
 type Cluster struct {
@@ -157,6 +170,223 @@ type ClusterResource struct {
     Template   uint64  `json:",omitempty"`
     Uptime     uint64  `json:",omitempty"`
     VMID       uint64  `json:",omitempty"`
+}
+
+type Ceph struct {
+	client *Client
+}
+
+type ClusterCephStatus struct {
+	ElectionEpoch  int            `json:"election_epoch"`
+	Fsid           string         `json:"fsid"`
+	Fsmap          CephFsMap      `json:"fsmap"`
+	Health         CephHealth     `json:"health"`
+	Mgrmap         CephMgrMap     `json:"mgrmap"`
+	Monmap         CephMonMap     `json:"monmap"`
+	Osdmap         CephOsdMap     `json:"osdmap"`
+	Pgmap          CephPgMap      `json:"pgmap"`
+	ProgressEvents struct{}       `json:"progress_events"`
+	Quorum         []int          `json:"quorum"`
+	QuorumAge      int            `json:"quorum_age"`
+	QuorumNames    []string       `json:"quorum_names"`
+	Servicemap     CephServiceMap `json:"servicemap"`
+}
+
+type CephHealthCheckName string
+type CephHealthCheckDetail struct {
+	Message string `json:"message"`
+}
+type CephHealthCheckSummary struct {
+	Count   int    `json:"count"`
+	Message string `json:"message"`
+}
+type CephHealthCheck struct {
+	Detail   []CephHealthCheckDetail `json:"detail"`
+	Muted    bool                    `json:"muted"`
+	Severity string                  `json:"severity"`
+	Summary  CephHealthCheckSummary  `json:"summary"`
+}
+
+type CephHealth struct {
+	Checks map[CephHealthCheckName]CephHealthCheck `json:"checks"`
+	Mutes  []interface{}                           `json:"mutes"`
+	Status string                                  `json:"status"`
+}
+
+type CephOsdMap struct {
+	Epoch          int `json:"epoch"`
+	NumInOsds      int `json:"num_in_osds"`
+	NumOsds        int `json:"num_osds"`
+	NumRemappedPgs int `json:"num_remapped_pgs"`
+	NumUpOsds      int `json:"num_up_osds"`
+	OsdInSince     int `json:"osd_in_since"`
+	OsdUpSince     int `json:"osd_up_since"`
+}
+
+type CephPgMap struct {
+	BytesAvail int64 `json:"bytes_avail"`
+	BytesTotal int64 `json:"bytes_total"`
+	BytesUsed  int64 `json:"bytes_used"`
+	DataBytes  int64 `json:"data_bytes"`
+	NumObjects int   `json:"num_objects"`
+	NumPgs     int   `json:"num_pgs"`
+	NumPools   int   `json:"num_pools"`
+	PgsByState []struct {
+		Count     int    `json:"count"`
+		StateName string `json:"state_name"`
+	} `json:"pgs_by_state"`
+	ReadBytesSec  int `json:"read_bytes_sec"`
+	ReadOpPerSec  int `json:"read_op_per_sec"`
+	WriteBytesSec int `json:"write_bytes_sec"`
+	WriteOpPerSec int `json:"write_op_per_sec"`
+}
+
+type CephMonMap struct {
+	Created           time.Time       `json:"created"`
+	DisallowedLeaders string          `json:"disallowed_leaders: "`
+	ElectionStrategy  int             `json:"election_strategy"`
+	Epoch             int             `json:"epoch"`
+	Features          CephMonFeatures `json:"features"`
+	Fsid              string          `json:"fsid"`
+	MinMonRelease     int             `json:"min_mon_release"`
+	MinMonReleaseName string          `json:"min_mon_release_name"`
+	Modified          time.Time       `json:"modified"`
+	Mons              []CephMon       `json:"mons"`
+	Quorum            []int           `json:"quorum"`
+	RemovedRanks      string          `json:"removed_ranks: "`
+	StretchMode       bool            `json:"stretch_mode"`
+	TiebreakerMon     string          `json:"tiebreaker_mon"`
+}
+
+type CephMon struct {
+	Addr          string `json:"addr"`
+	CrushLocation string `json:"crush_location"`
+	Name          string `json:"name"`
+	Priority      int    `json:"priority"`
+	Rank          int    `json:"rank"`
+	Weight        int    `json:"weight"`
+	PublicAddr    string `json:"public_addr"`
+	PublicAddrs   struct {
+		Addrvec []CephMgrAddrVector `json:"addrvec"`
+	} `json:"public_addrs"`
+}
+
+type CephMonFeatures struct {
+	Optional   []interface{} `json:"optional"`
+	Persistent []string      `json:"persistent"`
+}
+
+type CephFsMap struct {
+	ByRank []struct {
+		FilesystemID int    `json:"filesystem_id"`
+		Gid          int    `json:"gid"`
+		Name         string `json:"name"`
+		Rank         int    `json:"rank"`
+		Status       string `json:"status"`
+	} `json:"by_rank"`
+	Epoch     int `json:"epoch"`
+	ID        int `json:"id"`
+	In        int `json:"in"`
+	Max       int `json:"max"`
+	Up        int `json:"up"`
+	UpStandby int `json:"up:standby"`
+}
+
+type CephServiceMap struct {
+	Epoch    int      `json:"epoch"`
+	Modified string   `json:"modified"`
+	Services struct{} `json:"services"`
+}
+
+type CephMgrMap struct {
+	ActiveAddr          string                   `json:"active_addr"`
+	ActiveAddrs         CephMgrActiveAddresses   `json:"active_addrs"`
+	ActiveChange        string                   `json:"active_change"`
+	ActiveClients       []CephMgrActiveClient    `json:"active_clients"`
+	ActiveGid           int                      `json:"active_gid"`
+	ActiveMgrFeatures   int64                    `json:"active_mgr_features"`
+	ActiveName          string                   `json:"active_name"`
+	AlwaysOnModules     CephMgrAlwaysOnModules   `json:"always_on_modules"`
+	Available           bool                     `json:"available"`
+	AvailableModules    []CephMgrAvailableModule `json:"available_modules"`
+	Epoch               int                      `json:"epoch"`
+	LastFailureOsdEpoch int                      `json:"last_failure_osd_epoch"`
+	Modules             []string                 `json:"modules"`
+	Services            CephMgrServices          `json:"services"`
+	Standbys            []CephMgrStandby         `json:"standbys"`
+}
+
+type CephMgrAvailableModule struct {
+	CanRun        bool                          `json:"can_run"`
+	ErrorString   string                        `json:"error_string"`
+	ModuleOptions CephMgrAvailableModuleOptions `json:"module_options"`
+	Name          string                        `json:"name"`
+}
+
+type CephMgrAvailableModuleOptions struct {
+	Interval          CephMgrAvailableModuleOption `json:"interval"`
+	LogLevel          CephMgrAvailableModuleOption `json:"log_level"`
+	LogToCluster      CephMgrAvailableModuleOption `json:"log_to_cluster"`
+	LogToClusterLevel CephMgrAvailableModuleOption `json:"log_to_cluster_level"`
+	LogToFile         CephMgrAvailableModuleOption `json:"log_to_file"`
+	SMTPDestination   CephMgrAvailableModuleOption `json:"smtp_destination"`
+	SMTPFromName      CephMgrAvailableModuleOption `json:"smtp_from_name"`
+	SMTPHost          CephMgrAvailableModuleOption `json:"smtp_host"`
+	SMTPPassword      CephMgrAvailableModuleOption `json:"smtp_password"`
+	SMTPPort          CephMgrAvailableModuleOption `json:"smtp_port"`
+	SMTPSender        CephMgrAvailableModuleOption `json:"smtp_sender"`
+	SMTPSsl           CephMgrAvailableModuleOption `json:"smtp_ssl"`
+	SMTPUser          CephMgrAvailableModuleOption `json:"smtp_user"`
+}
+
+type CephMgrAvailableModuleOption struct {
+	DefaultValue string        `json:"default_value"`
+	Desc         string        `json:"desc"`
+	EnumAllowed  []string      `json:"enum_allowed"`
+	Flags        int           `json:"flags"`
+	Level        string        `json:"level"`
+	LongDesc     string        `json:"long_desc"`
+	Max          string        `json:"max"`
+	Min          string        `json:"min"`
+	Name         string        `json:"name"`
+	SeeAlso      []interface{} `json:"see_also"`
+	Tags         []interface{} `json:"tags"`
+	Type         string        `json:"type"`
+}
+
+type CephMgrServices struct {
+	Dashboard  string `json:"dashboard"`
+	Prometheus string `json:"prometheus"`
+}
+
+type CephMgrStandby struct {
+	AvailableModules []CephMgrAvailableModule `json:"available_modules"`
+	Gid              int                      `json:"gid"`
+	MgrFeatures      int64                    `json:"mgr_features"`
+	Name             string                   `json:"name"`
+}
+
+type CephMgrActiveAddresses struct {
+	Addrvec []CephMgrAddrVector `json:"addrvec"`
+}
+
+type CephMgrAddrVector struct {
+	Addr  string `json:"addr"`
+	Nonce int    `json:"nonce"`
+	Type  string `json:"type"`
+}
+
+type CephMgrActiveClient struct {
+	Addrvec []CephMgrAddrVector `json:"addrvec"`
+	Name    string              `json:"name"`
+}
+
+type CephMgrAlwaysOnModules struct {
+	Octopus []string `json:"octopus"`
+	Pacific []string `json:"pacific"`
+	Quincy  []string `json:"quincy"`
+	Reef    []string `json:"reef"`
+	Squid   []string `json:"squid"`
 }
 
 type NodeStatuses []*NodeStatus
@@ -291,17 +521,17 @@ const (
 )
 
 type RRDData struct {
-    CPU         float64
-    DiskRead    float64
-    DiskWrite   float64
-    MaxCPU      int
-    MaxMem      float64
-    Mem         float64
-    NetIn       float64
-    NetOut      float64
-    Disk        int
-    MaxDisk     float64
-    Time        uint64
+    Time      uint64
+    CPU       float64
+    MaxCPU    int
+    Mem       float64
+    MaxMem    uint64
+    Disk      int
+    MaxDisk   uint64
+    DiskRead  float64
+    DiskWrite float64
+    NetIn     float64
+    NetOut    float64
 }
 
 // VirtualMachineOptions A key/value pair used to modify a virtual machine config
@@ -526,6 +756,7 @@ type VirtualMachineConfig struct {
     Searchdomain string `json:"searchdomain,omitempty"`
     SSHKeys      string `json:"sshkeys,omitempty"`
     CICustom     string `json:"cicustom,omitempty"`
+    CIUpgrade    int    `json:"ciupgrade,omitempty"`
 
     // Cloud-init interfaces
     IPConfigs map[string]string `json:"-"`
@@ -659,17 +890,19 @@ func (l *Log) UnmarshalJSON(b []byte) error {
 
 type Containers []*Container
 type Container struct {
+    client          *Client
+    ContainerConfig *ContainerConfig
+
+    CPUs    int
+    MaxDisk uint64
+    MaxMem  uint64
+    MaxSwap uint64
     Name    string
     Node    string
-    client  *Client
-    CPUs    int
     Status  string
-    VMID    StringOrUint64
-    Uptime  uint64
-    MaxMem  uint64
-    MaxDisk uint64
-    MaxSwap uint64
     Tags    string
+    Uptime  uint64
+    VMID    StringOrUint64
 }
 
 type ContainerInterfaces []*ContainerInterface
@@ -691,6 +924,108 @@ type ContainerCloneOptions struct {
     SnapName    string `json:"snapname,omitempty"`
     Storage     string `json:"storage,omitempty"`
     Target      string `json:"target,omitempty"`
+}
+
+type ContainerConfig struct {
+	Arch         string            `json:"arch,omitempty"`
+	CMode        string            `json:"cmode,omitempty"`
+	Console      IntOrBool         `json:"console,omitempty"`
+	Cores        int               `json:"cores,omitempty"`
+	CPULimit     int               `json:"cpulimit,omitempty"`
+	CPUUnits     int               `json:"cpuunits,omitempty"`
+	Debug        IntOrBool         `json:"debug,omitempty"`
+	Description  string            `json:"description,omitempty"`
+	Devs         map[string]string `json:"-"` // internal helper for Dev0..9
+	Dev0         string            `json:"dev0,omitempty"`
+	Dev1         string            `json:"dev1,omitempty"`
+	Dev2         string            `json:"dev2,omitempty"`
+	Dev3         string            `json:"dev3,omitempty"`
+	Dev4         string            `json:"dev4,omitempty"`
+	Dev5         string            `json:"dev5,omitempty"`
+	Dev6         string            `json:"dev6,omitempty"`
+	Dev7         string            `json:"dev7,omitempty"`
+	Dev8         string            `json:"dev8,omitempty"`
+	Dev9         string            `json:"dev9,omitempty"`
+	Digest       string            `json:"digest"`
+	Features     string            `json:"features,omitempty"`
+	HookScript   string            `json:"hookscript,omitempty"`
+	LXC          [][]string        `json:"lxc,omitempty"`
+	Hostname     string            `json:"hostname,omitempty"`
+	Lock         string            `json:"lock,omitempty"`
+	Memory       int               `json:"memory,omitempty"`
+	Mps          map[string]string `json:"-"` // internal helper for Mp0..9
+	Mp0          string            `json:"mp0,omitempty"`
+	Mp1          string            `json:"mp1,omitempty"`
+	Mp2          string            `json:"mp2,omitempty"`
+	Mp3          string            `json:"mp3,omitempty"`
+	Mp4          string            `json:"mp4,omitempty"`
+	Mp5          string            `json:"mp5,omitempty"`
+	Mp6          string            `json:"mp6,omitempty"`
+	Mp7          string            `json:"mp7,omitempty"`
+	Mp8          string            `json:"mp8,omitempty"`
+	Mp9          string            `json:"mp9,omitempty"`
+	Nameserver   string            `json:"nameserver,omitempty"`
+	Nets         map[string]string `json:"-"` // internal helper for Net0..9
+	Net0         string            `json:"net0,omitempty"`
+	Net1         string            `json:"net1,omitempty"`
+	Net2         string            `json:"net2,omitempty"`
+	Net3         string            `json:"net3,omitempty"`
+	Net4         string            `json:"net4,omitempty"`
+	Net5         string            `json:"net5,omitempty"`
+	Net6         string            `json:"net6,omitempty"`
+	Net7         string            `json:"net7,omitempty"`
+	Net8         string            `json:"net8,omitempty"`
+	Net9         string            `json:"net9,omitempty"`
+	OnBoot       IntOrBool         `json:"onboot,omitempty"`
+	OSType       string            `json:"ostype,omitempty"`
+	Protection   IntOrBool         `json:"protection,omitempty"`
+	RootFS       string            `json:"rootfs,omitempty"`
+	SearchDomain string            `json:"searchdomain:omitempty"`
+	Startup      string            `json:"startup:omitempty"`
+	Swap         int               `json:"swap,omitempty"`
+	TagsSlice    []string          `json:"-"` // internal helper to manage tags easier
+	Tags         string            `json:"tags,omitempty"`
+	Template     IntOrBool         `json:"template,omitempty"`
+	Timezone     string            `json:"timezone,omitempty"`
+	TTY          int               `json:"tty,omitempty"`
+	Unprivileged IntOrBool         `json:"unprivileged,omitempty"`
+	Unuseds      map[string]string `json:"-"` // internal helper
+	Unused0      string            `json:"unused0,omitempty"`
+	Unused1      string            `json:"unused1,omitempty"`
+	Unused2      string            `json:"unused2,omitempty"`
+	Unused3      string            `json:"unused3,omitempty"`
+	Unused4      string            `json:"unused4,omitempty"`
+	Unused5      string            `json:"unused5,omitempty"`
+	Unused6      string            `json:"unused6,omitempty"`
+	Unused7      string            `json:"unused7,omitempty"`
+	Unused8      string            `json:"unused8,omitempty"`
+	Unused9      string            `json:"unused9,omitempty"`
+}
+
+func (cc *ContainerConfig) UnmarshalJSON(data []byte) error {
+	type tmpContainerConfig ContainerConfig
+
+	// create a struct and embed temporary alias of ContainerConfig to avoid recursion
+	// this will also populate the rest of the fields using the built in unmarshal function
+	tmp := &struct {
+		*tmpContainerConfig
+	}{
+		tmpContainerConfig: (*tmpContainerConfig)(cc),
+	}
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return err
+	}
+
+	// Split the tags on TagSeparator and populate TagsSlice
+	cc.TagsSlice = strings.Split(cc.Tags, TagSeperator)
+
+	// Populate the indexed fields into helper maps
+	cc.MergeDevs()
+	cc.MergeMps()
+	cc.MergeNets()
+	cc.MergeUnuseds()
+
+	return nil
 }
 
 // ContainerOptions A key/value pair used to modify a container(LXC) config
@@ -737,6 +1072,23 @@ type Storage struct {
     Storage      string
 }
 
+type ClusterStorages []*ClusterStorage
+
+type ClusterStorage struct {
+	client   *Client
+	Content  string
+	Digest   string
+	Storage  string
+	Type     string
+	Thinpool string `json:",omitempty"`
+	Path     string `json:",omitempty"`
+	VgName   string `json:",omitempty"`
+}
+
+type ClusterStorageOptions struct {
+	Name  string
+	Value string
+}
 type Volume interface {
     Delete() error
 }
@@ -874,7 +1226,7 @@ func (b *IntOrBool) UnmarshalJSON(i []byte) error {
 }
 
 func (b *IntOrBool) MarshalJSON() ([]byte, error) {
-    if *b == true {
+    if *b {
         return []byte("1"), nil
     }
     return []byte("0"), nil
@@ -915,18 +1267,18 @@ type NodeNetwork struct {
     OVSPorts   string `json:"ovs_ports,omitempty"`
     OVSTags    string `json:"ovs_tag,omitempty"`
 
-    Slaves   string `json:"slaves,omitempty"`
-    Address  string `json:"address,omitempty"`
-    Address6 string `json:"address6,omitempty"`
-    Type     string `json:"type,omitempty"`
-    Active   int    `json:"active,omitempty"`
-    Method   string `json:"method,omitempty"`
-    Method6  string `json:"method6,omitempty"`
-    Priority int    `json:"priority,omitempty"`
+    Slaves   string      `json:"slaves,omitempty"`
+    Address  string      `json:"address,omitempty"`
+    Address6 string      `json:"address6,omitempty"`
+    Type     string      `json:"type,omitempty"`
+    Active   StringOrInt `json:"active,omitempty"`
+    Method   string      `json:"method,omitempty"`
+    Method6  string      `json:"method6,omitempty"`
+    Priority int         `json:"priority,omitempty"`
 }
 
 type AgentNetworkIPAddress struct {
-    IPAddressType string `json:"ip-address-type"` //ipv4 ipv6
+    IPAddressType string `json:"ip-address-type"` // ipv4 ipv6
     IPAddress     string `json:"ip-address"`
     Prefix        int    `json:"prefix"`
     MacAddress    string `json:"mac-address"`
@@ -983,7 +1335,7 @@ type FirewallRule struct {
 }
 
 func (r *FirewallRule) IsEnable() bool {
-    return 1 == r.Enable
+    return r.Enable == 1
 }
 
 type FirewallNodeOption struct {
@@ -1084,7 +1436,7 @@ type Domain struct {
     GroupFilter    string    `json:"group_filter,omitempty"`
     GroupName      string    `json:"group_name,omitempty"`
     IssuerURL      string    `json:"issuer-url,omitempty"`
-    Mode           string    `json:"mode,omitempty"` //ldap, ldaps,ldap+starttls
+    Mode           string    `json:"mode,omitempty"` // ldap, ldaps,ldap+starttls
     Password       string    `json:"password,omitempty"`
     Port           int       `json:"port,omitempty"`
     Prompt         string    `json:"prompt,omitempty"`
@@ -1098,7 +1450,7 @@ type Domain struct {
     TFA            string    `json:"tfa,omitempty"`
     UserAttr       string    `json:"user_attr,omitempty"`
     UserClasses    string    `json:"user_classes,omitempty"`
-    Verify         IntOrBool `json:"verify,omitempty"`
+    Verify         IntOrBool `json:"verify"`
 }
 
 // DomainSyncOptions see details https://pve.proxmox.com/pve-docs/api-viewer/#/access/domains/{realm}/sync
@@ -1124,7 +1476,7 @@ type User struct {
     UserID         string           `json:"userid,omitempty"`
     Comment        string           `json:"comment,omitempty"`
     Email          string           `json:"email,omitempty"`
-    Enable         IntOrBool        `json:"enable,omitempty"`
+    Enable         IntOrBool        `json:"enable"`
     Expire         int              `json:"expire,omitempty"`
     Firstname      string           `json:"firstname,omitempty"`
     Lastname       string           `json:"lastname,omitempty"`
@@ -1136,12 +1488,24 @@ type User struct {
     TOTPLocked     IntOrBool        `json:"totp-locked,omitempty"`
 }
 
+type UserOptions struct {
+    Append    IntOrBool `json:"append,omitempty"`
+    Comment   string    `json:"comment,omitempty"`
+    Email     string    `json:"email,omitempty"`
+    Enable    IntOrBool `json:"enable"`
+    Expire    int       `json:"expire,omitempty"`
+    Firstname string    `json:"firstname,omitempty"`
+    Groups    []string  `json:"groups,omitempty"`
+    Keys      string    `json:"keys,omitempty"`
+    Lastname  string    `json:"lastname,omitempty"`
+}
+
 type Tokens []*Token
 type Token struct {
     TokenID string    `json:"tokenid,omitempty"`
     Comment string    `json:"comment,omitempty"`
     Expire  int       `json:"expire,omitempty"`
-    Privsep IntOrBool `json:"privsep,omitempty"`
+    Privsep IntOrBool `json:"privsep"`
 }
 
 type Roles []*Role
@@ -1154,21 +1518,21 @@ type Role struct {
 
 type ACLs []*ACL
 type ACL struct {
-    Path      string    `json:",omitempty"`
-    RoleID    string    `json:",omitempty"`
-    Type      string    `json:",omitempty"`
-    UGID      string    `json:",omitempty"`
-    Propagate IntOrBool `json:",omitempty"`
+    Path      string    `json:"path,omitempty"`
+    RoleID    string    `json:"roleid,omitempty"`
+    Type      string    `json:"type,omitempty"`
+    UGID      string    `json:"ugid,omitempty"`
+    Propagate IntOrBool `json:"propagate,omitempty"`
 }
 
 type ACLOptions struct {
-    Path      string    `json:",omitempty"`
-    Roles     string    `json:",omitempty"`
-    Groups    string    `json:",omitempty"`
-    Users     string    `json:",omitempty"`
-    Tokens    string    `json:",omitempty"`
-    Propagate IntOrBool `json:",omitempty"`
-    Delete    IntOrBool `json:",omitempty"` // true to delete the ACL
+    Path      string    `json:"path,omitempty"`
+    Roles     string    `json:"roles,omitempty"` // comma separated list of roles
+    Groups    string    `json:"groups,omitempty"`
+    Users     string    `json:"users,omitempty"`
+    Tokens    string    `json:"tokens,omitempty"`
+    Propagate IntOrBool `json:"propagate"`        // Default is true, omitempty would never send false
+    Delete    IntOrBool `json:"delete,omitempty"` // true to delete the ACL
 }
 
 type StorageDownloadURLOptions struct {
@@ -1180,7 +1544,7 @@ type StorageDownloadURLOptions struct {
     Checksum           string    `json:"checksum,omitempty"`
     ChecksumAlgorithm  string    `json:"checksum-algorithm,omitempty"`
     Compression        string    `json:"compression,omitempty"`
-    VerifyCertificates IntOrBool `json:"verify-certificates,omitempty"`
+    VerifyCertificates IntOrBool `json:"verify-certificates"`
 }
 
 type StorageContent struct {
@@ -1223,7 +1587,7 @@ type NewUser struct {
     UserID    string   `json:"userid"`
     Comment   string   `json:"comment,omitempty"`
     Email     string   `json:"email,omitempty"`
-    Enable    bool     `json:"enable,omitempty"`
+    Enable    bool     `json:"enable"`
     Expire    int      `json:"expire,omitempty"`
     Firstname string   `json:"firstname,omitempty"`
     Groups    []string `json:"groups,omitempty"`
@@ -1283,6 +1647,32 @@ type FirewallIPSetCidr struct {
     Name  string `json:"name,omitempty"`
     Node  string `json:"node,omitempty"`
     Vmid  int64 `json:"vmid,omitempty"`
+}
+
+type FirewallIPSetCreationOption struct {
+    Name    string `json:"name"`
+    Digest  string `json:"digest,omitempty"`
+    Comment string `json:"comment,omitempty"`
+    Rename  string `json:"rename,omitempty"`
+}
+
+type FirewallIPSetEntry struct {
+    CIDR    string `json:"cidr,omitempty"`
+    Digest  string `json:"digest,omitempty"`
+    Comment string `json:"comment,omitempty"`
+    NoMatch bool   `json:"nomatch,omitempty"`
+}
+
+type FirewallIPSetEntryCreationOption struct {
+    CIDR    string `json:"cidr"`
+    Comment string `json:"comment,omitempty"`
+    NoMatch bool   `json:"nomatch,omitempty"`
+}
+
+type FirewallIPSetEntryUpdateOption struct {
+    Comment string `json:"comment,omitempty"`
+    Digest  string `json:"digest,omitempty"`
+    NoMatch bool   `json:"nomatch,omitempty"`
 }
 
 type (
@@ -1549,4 +1939,101 @@ type VzdumpConfig struct {
     IPConfig7 string `json:"ipconfig7,omitempty"`
     IPConfig8 string `json:"ipconfig8,omitempty"`
     IPConfig9 string `json:"ipconfig9,omitempty"`
+}
+
+type PendingConfiguration []PendingConfigItem
+
+type PendingConfigItem struct {
+    Key    string `json:"key,omitempty"`
+    Delete *int   `json:"delete,omitempty"`
+    // Proxmox API doc says "Pending" & "Value" fields return string but in reality it could be anything
+    Pending interface{} `json:"pending,omitempty"`
+    Value   interface{} `json:"value,omitempty"`
+}
+
+type VNet struct {
+    Name      string `json:"vnet,omitempty"`
+    Type      string `json:"type,omitempty"`
+    Zone      string `json:"zone,omitempty"`
+    VlanAware int    `json:"vlanaware,omitempty"`
+    Tag       uint16 `json:"tag,omitempty"`
+}
+
+type VNetOptions struct {
+    Name         string `json:"vnet"`
+    Zone         string `json:"zone"`
+    Alias        string `json:"alias,omitempty"`
+    IsolatePorts bool   `json:"isolate-ports,omitempty"`
+    Tag          uint32 `json:"tag,omitempty"`  // Could be a VLAN or VXLAN tag
+    Type         string `json:"type,omitempty"` // Type must be set to "vnet"
+    VlanAware    bool   `json:"vlanaware,omitempty"`
+}
+type NetRange struct {
+    StartAddress string `json:"start-address,omitempty"`
+    EndAddress   string `json:"end-address,omitempty"`
+}
+type VNetSubnet struct {
+    CIDR      string     `json:"cidr,omitempty"`
+    Gateway   string     `json:"gateway,omitempty"`
+    Netmask   string     `json:"mask,omitempty"`
+    Type      string     `json:"type,omitempty"`
+    Zone      string     `json:"zone,omitempty"`
+    VNet      string     `json:"vnet,omitempty"`
+    SNAT      int        `json:"snat,omitempty"`
+    Network   string     `json:"network,omitempty"`
+    ID        string     `json:"id,omitempty"`
+    DhcpRange []NetRange `json:"dhcp-range,omitempty"`
+}
+type IPAM struct {
+    Hostname string `json:"hostname,omitempty"`
+    IP       string `json:"ip,omitempty"`
+    Mac      string `json:"mac,omitempty"`
+    Subnet   string `json:"subnet,omitempty"`
+    VMID     string `json:"vmid,omitempty"`
+    VNet     string `json:"vnet,omitempty"`
+    Zone     string `json:"zone,omitempty"`
+    Gateway  int    `json:"gateway,omitempty"`
+}
+
+type SDNZone struct {
+    Name       string   `json:"zone"`
+    Type       string   `json:"type"`
+    DHCP       string   `json:"dhcp,omitempty"`
+    DNS        string   `json:"dns,omitempty"`
+    DNSZone    string   `json:"dnszone,omitempty"`
+    IPAM       string   `json:"ipam,omitempty"`
+    MTU        int      `json:"mtu,omitempty"`
+    Nodes      []string `json:"nodes,omitempty"`
+    Pending    bool     `json:"pending,omitempty"`
+    ReverseDNS string   `json:"reversedns,omitempty"`
+    State      string   `json:"state,omitempty"`
+}
+
+type SDNZoneOptions struct {
+    Name                     string `json:"zone"`
+    Type                     string `json:"type"`
+    AdvertiseSubnets         bool   `json:"advertise-subnets,omitempty"`
+    Bridge                   string `json:"bridge,omitempty"`
+    BridgeDisableMACLearning bool   `json:"bridge-disable-mac-learning,omitempty"`
+    Controller               string `json:"controller,omitempty"`
+    DHCP                     string `json:"dhcp,omitempty"`
+    DisableARPNDSuppression  bool   `json:"disable-arp-nd-suppression,omitempty"`
+    DNS                      string `json:"dns,omitempty"`
+    DNSZone                  string `json:"dnszone,omitempty"`
+    DPID                     int    `json:"dpid,omitempty"`
+    ExitNodes                string `json:"exit-nodes,omitempty"`
+    ExitNodesLocalRouting    bool   `json:"exit-nodes-local-routing,omitempty"`
+    ExitNodesPrimary         string `json:"exit-nodes-primary,omitempty"`
+    Fabric                   string `json:"fabric,omitempty"`
+    IPAM                     string `json:"ipam,omitempty"`
+    MAC                      string `json:"mac,omitempty"`
+    MTU                      int    `json:"mtu,omitempty"`
+    Nodes                    string `json:"nodes,omitempty"`
+    Peers                    string `json:"peers,omitempty"`
+    ReverseDNS               string `json:"reversedns,omitempty"`
+    RTImport                 string `json:"rt-import,omitempty"`
+    Tag                      uint   `json:"tag,omitempty"`
+    VLANProtocol             string `json:"vlan-protocol,omitempty"`
+    VRFVXLAN                 int    `json:"vrf-vxlan,omitempty"`
+    VXLANPort                uint16 `json:"vxlan-port,omitempty"`
 }
