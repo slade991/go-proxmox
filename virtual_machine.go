@@ -1,16 +1,16 @@
 package proxmox
 
 import (
-    "context"
-    "fmt"
-    "net/url"
-    "os"
-    "path/filepath"
-    "strings"
-    "time"
+	"context"
+	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
-    "github.com/diskfs/go-diskfs/backend/file"
-    "github.com/diskfs/go-diskfs/filesystem/iso9660"
+	"github.com/diskfs/go-diskfs/backend/file"
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 )
 
 const (
@@ -89,23 +89,6 @@ func (v *VirtualMachine) AddTag(ctx context.Context, value string) (*Task, error
 		Name:  "tags",
 		Value: v.VirtualMachineConfig.Tags,
 	})
-}
-
-func (c *VirtualMachine) GetFirewallIPSet(ctx context.Context) (ipsets []*FirewallIPSet, err error) {
-	return ipsets, c.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", c.Node, c.VMID), &ipsets)
-}
-
-func (c *VirtualMachine) NewFirewallIPSet(ctx context.Context, ipset *FirewallIPSet) error {
-	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", c.Node, c.VMID), ipset, nil)
-}
-
-func (c *VirtualMachine) DeleteFirewallIPSet(ctx context.Context, name string, force bool) error {
-	return c.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", c.Node, c.VMID, name), map[string]interface{}{"force": force})
-}
-func (c *VirtualMachine) AddCidrToFirewallIpSet(ctx context.Context, ipsetCidr *FirewallIPSetCidr) error {
-    ipsetCidr.Vmid = int64(c.VMID)
-    ipsetCidr.Node = c.Node
-	return c.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", c.Node, c.VMID, ipsetCidr.Name), ipsetCidr , nil)
 }
 
 func (v *VirtualMachine) RemoveTag(ctx context.Context, value string) (*Task, error) {
@@ -265,12 +248,11 @@ func (v *VirtualMachine) TermWebSocket(term *Term) (chan []byte, chan []byte, ch
 // send, recv, errors, closer, errors := vm.VNCWebSocket(vnc)
 // for this to work you need to first set up a serial terminal on your vm https://pve.proxmox.com/wiki/Serial_Terminal
 func (v *VirtualMachine) VNCWebSocket(vnc *VNC) (chan []byte, chan []byte, chan error, func() error, error) {
-    p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
-        v.Node, v.VMID, vnc.Port, url.QueryEscape(vnc.Ticket))
+	p := fmt.Sprintf("/nodes/%s/qemu/%d/vncwebsocket?port=%d&vncticket=%s",
+		v.Node, v.VMID, vnc.Port, url.QueryEscape(vnc.Ticket))
 
-    return v.client.VNCWebSocket(p, vnc)
+	return v.client.VNCWebSocket(p, vnc)
 }
-
 
 func (v *VirtualMachine) IsRunning() bool {
 	return v.Status == StatusVirtualMachineRunning && (v.QMPStatus == "" || v.QMPStatus == StatusVirtualMachineRunning)
@@ -606,6 +588,50 @@ func (v *VirtualMachine) AgentOsInfo(ctx context.Context) (info *AgentOsInfo, er
 
 func (v *VirtualMachine) AgentSetUserPassword(ctx context.Context, password string, username string) error {
 	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", v.Node, v.VMID), map[string]string{"password": password, "username": username}, nil)
+}
+
+func (v *VirtualMachine) GetFirewallIPSet(ctx context.Context) (ipsets []*FirewallIPSet, err error) {
+	return ipsets, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", v.Node, v.VMID), &ipsets)
+}
+
+func (v *VirtualMachine) NewFirewallIPSet(ctx context.Context, ipset FirewallIPSetCreationOption) error {
+	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", v.Node, v.VMID), ipset, nil)
+}
+
+func (v *VirtualMachine) DeleteFirewallIPSet(ctx context.Context, name string, force bool) error {
+	return v.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", v.Node, v.VMID, name), map[string]interface{}{"force": force})
+}
+
+func (v *VirtualMachine) GetFirewallIPSetEntries(ctx context.Context, name string) (entries []*FirewallIPSetEntry, err error) {
+	return entries, v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", v.Node, v.VMID, name), &entries)
+}
+
+func (v *VirtualMachine) NewFirewallIPSetEntry(ctx context.Context, name string, entry FirewallIPSetEntryCreationOption) error {
+	return v.client.Post(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", v.Node, v.VMID, name), entry, nil)
+}
+
+func (v *VirtualMachine) DeleteFirewallIPSetEntry(ctx context.Context, name string, cidr string, digest string) error {
+    return v.client.Delete(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", v.Node, v.VMID, name, cidr), map[string]interface{}{
+        "digest": digest,
+        })
+}
+
+func (v *VirtualMachine) GetFirewallIPSetEntry(ctx context.Context, name string, cidr string) (entry *FirewallIPSetEntry, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", v.Node, v.VMID, name, cidr), &entry)
+	return
+}
+
+func (v *VirtualMachine) UpdateFirewallIPSetEntry(ctx context.Context, name string, cidr string, entry *FirewallIPSetEntryUpdateOption) error {
+	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", v.Node, v.VMID, name, cidr), entry, nil)
+}
+
+func (v *VirtualMachine) FirewallOptionGet(ctx context.Context) (firewallOption *FirewallVirtualMachineOption, err error) {
+	err = v.client.Get(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption)
+	return
+}
+
+func (v *VirtualMachine) FirewallOptionSet(ctx context.Context, firewallOption *FirewallVirtualMachineOption) error {
+	return v.client.Put(ctx, fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", v.Node, v.VMID), firewallOption, nil)
 }
 
 func (v *VirtualMachine) FirewallGetRules(ctx context.Context) (rules []*FirewallRule, err error) {
